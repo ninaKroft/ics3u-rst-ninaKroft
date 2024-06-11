@@ -18,20 +18,26 @@ import javafx.scene.text.Text;
 public class SpaceInvaders extends Application {
 
 	//Defining variables
-	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700;
+	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75;
+
 	boolean menuActive = true, runActive = false, lossActive = false;
 	
 	//Text objects
-	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart;
-	//Text sizes
-	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75;
+	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart, txtScore;
+	
+	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75, HIDDEN = 0,
+			PLAYER_SPEED = 10;
 	final double V_ENTER_TO_START_POSITION = 1.25;
+	
+	int score, xDisp;
 	
 	Scene scene;
 	
-	Group root = null;
+	Group root = null, nodes = null, borders = null;
 	
 	Rectangle leftBorder, rightBorder;
+	
+	Player player;
 	
 	@Override
 	public void start(Stage myStage) throws Exception {
@@ -47,49 +53,18 @@ public class SpaceInvaders extends Application {
 		
 		//Title setup
 		
-		if (menuActive) {
-			txtTitle = new Text("SPACE INVADERS");
-			txtTitle.setFont(Font.font("verdana", TITLE_SIZE));
-			txtTitle.setX(SCREEN_WIDTH / 2 - (txtTitle.maxWidth(TITLE_SIZE) / 2));
-			txtTitle.setY(SCREEN_HEIGHT / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
-			txtTitle.setFill(Color.WHITE);
-			
-			//Instructions setup
-			txtInstructions = new Text("INSTRUCTIONS: Use the left and right arrows to move side-to-side. \nUse the up arrow to shoot a beam."
-					+ " Your goal is to hit and vanquish the \noncoming aliens before they reach you. Vanquish as many as possible"
-					+ " \nfor the highest score!");
-			txtInstructions.setFont(Font.font("verdana", INSTRUCTION_SIZE));
-			txtInstructions.setX(SCREEN_WIDTH / 2 - (txtInstructions.maxWidth(TITLE_SIZE) / 2));
-			txtInstructions.setY(SCREEN_HEIGHT / V_INSTRUCTION_POSITION - (txtInstructions.maxHeight(TITLE_SIZE) / 2));
-			txtInstructions.setFill(Color.WHITE);
-			
-			//Enter to start text
-			txtEnterToStart = new Text("PRESS ENTER TO START");
-			txtEnterToStart.setFont(Font.font("verdana", TITLE_SIZE));
-			txtEnterToStart.setX(SCREEN_WIDTH / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE) / 2));
-			txtEnterToStart.setY(SCREEN_HEIGHT / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
-			txtEnterToStart.setFill(Color.WHITE);
-			
-			//Borders
-			leftBorder = new Rectangle(0, 0, BORDER_WIDTH, SCREEN_HEIGHT);
-			leftBorder.setFill(Color.rgb(128, 3, 252));
-			rightBorder = new Rectangle(SCREEN_WIDTH - BORDER_WIDTH, 0, BORDER_WIDTH, SCREEN_HEIGHT);
-			rightBorder.setFill(Color.rgb(128, 3, 252));
-			
-			//Grouping the elements
-			root = new Group(txtTitle, txtInstructions, txtEnterToStart, leftBorder, rightBorder);
-		
-		} else if (runActive) {
-			//Generate elements for running
-		} else if (lossActive) {
-			//Generate elements for loss screen
-		}
+		root = new Group(generateElements());
 		
 		GameTimer timer = new GameTimer();
 		timer.start();
 		
+		//Generating the scene
 		scene = new Scene(root, SCREEN_WIDTH, SCREEN_HEIGHT);
 		scene.setFill(Color.rgb(10, 3, 23));
+		
+		//Handling keys pressed and released
+		scene.setOnKeyPressed(event -> handleKeyPressed(event));
+		scene.setOnKeyReleased(event -> handleKeyReleased(event));
 		
 		myStage.setTitle("Space Invaders");
         myStage.setScene(scene);
@@ -103,34 +78,152 @@ public class SpaceInvaders extends Application {
 		public void handle(long now) {
 			//Updating the frame for animations and detecting collisions
 			
-			//Handling if the user re-sizes the screen
-			//Title
-			txtTitle.setX(scene.getWidth() / 2 - (txtTitle.maxWidth(TITLE_SIZE)) / 2);
-			txtTitle.setY(scene.getHeight() / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
 			
-			//Instructions
-			txtInstructions.setX(scene.getWidth() / 2 - (txtInstructions.maxWidth(INSTRUCTION_SIZE)) / 2);
-			txtInstructions.setY(scene.getHeight() / V_INSTRUCTION_POSITION - (txtInstructions.maxHeight(INSTRUCTION_SIZE) / 2));
 			
-			//Enter to start text
-			txtEnterToStart.setX(scene.getWidth() / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE)) / 2);
-			txtEnterToStart.setY(scene.getHeight() / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
+			//Updating the elements if the screen is resized
+			if (menuActive) {
+				showMenu();
+				updateMenu();
+			} else if (runActive) {
+				hideMenu();
+				player.show();
+				updatePlayer();
+			}
 			
-			//Borders
-			leftBorder.setHeight(scene.getHeight());
-			rightBorder.setHeight(scene.getHeight());
-			rightBorder.setX(scene.getWidth() - BORDER_WIDTH);
+			updateBorders();
+			
 		}
 	}
 	
 	private void handleKeyPressed(KeyEvent event) {
 		//handling keys pressed
+		KeyCode code = event.getCode();
+		
+		//User pressed enter; start the game
+		if (code == KeyCode.ENTER) {
+			menuActive = false;
+			hideMenu();
+			runActive = true;
+		}
+		if (code == KeyCode.LEFT || code == KeyCode.KP_LEFT || code == KeyCode.A) {
+			//simulating leftwards movement
+			xDisp = PLAYER_SPEED * -1;
+		}
+		if (code == KeyCode.RIGHT || code == KeyCode.KP_RIGHT || code == KeyCode.D) {
+			//simulating rightwards movement
+			xDisp = PLAYER_SPEED;
+		}
 	}
 	
 	private void handleKeyReleased(KeyEvent event) {
 		//handling keys released
+		KeyCode code = event.getCode();
+		
+		if (code == KeyCode.LEFT || code == KeyCode.KP_LEFT || code == KeyCode.A) {
+			xDisp = 0;
+		}
+		if (code == KeyCode.RIGHT || code == KeyCode.KP_RIGHT || code == KeyCode.D) {
+			xDisp = 0;
+		}
 	}
 	
+	//Creates all of the elements of the game and adds them to a group. Everything is set to be hidden except for the borders
+	private Group generateElements() {
+		//Title generation
+		txtTitle = new Text("SPACE INVADERS");
+		txtTitle.setFont(Font.font("verdana", HIDDEN));
+		txtTitle.setX(SCREEN_WIDTH / 2 - (txtTitle.maxWidth(TITLE_SIZE) / 2));
+		txtTitle.setY(SCREEN_HEIGHT / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
+		txtTitle.setFill(Color.WHITE);
+		
+		//Instructions generation
+		txtInstructions = new Text("INSTRUCTIONS: Use the left and right arrows (or A/D) to move side-to-side. \nUse the up arrow to shoot a beam."
+				+ " Your goal is to hit and vanquish the \noncoming aliens before they reach you. Vanquish as many as possible"
+				+ " \nfor the highest score!");
+		txtInstructions.setFont(Font.font("verdana", HIDDEN));
+		txtInstructions.setX(SCREEN_WIDTH / 2 - (txtInstructions.maxWidth(TITLE_SIZE) / 2));
+		txtInstructions.setY(SCREEN_HEIGHT / V_INSTRUCTION_POSITION - (txtInstructions.maxHeight(TITLE_SIZE) / 2));
+		txtInstructions.setFill(Color.WHITE);
+		
+		//Enter to start text generation
+		txtEnterToStart = new Text("PRESS ENTER TO START");
+		txtEnterToStart.setFont(Font.font("verdana", HIDDEN));
+		txtEnterToStart.setX(SCREEN_WIDTH / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE) / 2));
+		txtEnterToStart.setY(SCREEN_HEIGHT / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
+		txtEnterToStart.setFill(Color.WHITE);
+		
+		//Border generation
+		leftBorder = new Rectangle(0, 0, BORDER_WIDTH, SCREEN_HEIGHT);
+		leftBorder.setFill(Color.rgb(128, 3, 252));
+		rightBorder = new Rectangle(SCREEN_WIDTH - BORDER_WIDTH, 0, BORDER_WIDTH, SCREEN_HEIGHT);
+		rightBorder.setFill(Color.rgb(128, 3, 252));
+		
+		//Player generation
+		player = new Player(SCREEN_WIDTH / 2 - (PLAYER_WIDTH / 2), SCREEN_HEIGHT * 0.8, true);
+		player.hide();
+		
+		//Grouping the elements
+		nodes = new Group(txtTitle, txtInstructions, txtEnterToStart, player.playerImage, leftBorder, rightBorder);
+		
+		return nodes;
+	}
+
+	private void updateMenu() {
+		//Handling if the user re-sizes the screen
+		//Title
+		txtTitle.setX(scene.getWidth() / 2 - (txtTitle.maxWidth(TITLE_SIZE)) / 2);
+		txtTitle.setY(scene.getHeight() / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
+		
+		//Instructions
+		txtInstructions.setX(scene.getWidth() / 2 - (txtInstructions.maxWidth(INSTRUCTION_SIZE)) / 2);
+		txtInstructions.setY(scene.getHeight() / V_INSTRUCTION_POSITION - (txtInstructions.maxHeight(INSTRUCTION_SIZE) / 2));
+		
+		//Enter to start text
+		txtEnterToStart.setX(scene.getWidth() / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE)) / 2);
+		txtEnterToStart.setY(scene.getHeight() / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
+		
+		
+	}
+	
+	private void updateBorders() {
+		//Borders
+		leftBorder.setHeight(scene.getHeight());
+		rightBorder.setHeight(scene.getHeight());
+		rightBorder.setX(scene.getWidth() - BORDER_WIDTH);
+	}
+	
+	private void showMenu() {
+		txtTitle.setFont(Font.font(TITLE_SIZE));
+		txtInstructions.setFont(Font.font(INSTRUCTION_SIZE));
+		txtEnterToStart.setFont(Font.font(TITLE_SIZE));
+	}
+	
+	private void hideMenu() {
+		txtTitle.setFont(Font.font(0));
+		txtInstructions.setFont(Font.font(0));
+		txtEnterToStart.setFont(Font.font(0));
+	}
+	
+	private void updatePlayer() {
+		
+		double playerX = player.playerImage.getX();
+		
+		player.playerImage.setY(scene.getHeight() * 0.8);
+		
+		//Not allowing movement past the borders
+		if (playerX >= BORDER_WIDTH && playerX <= scene.getWidth() - BORDER_WIDTH) {
+			player.playerImage.setX(player.playerImage.getX() + xDisp);
+		}
+		//Moving the player to the right slightly if they are intersecting with the left border (so movement is allowed)
+		if (playerX <= BORDER_WIDTH) {
+			player.playerImage.setX(BORDER_WIDTH + 1);
+		}
+		//Moving the player to the left slightly if that are intersecting with the right border
+		if (playerX >= (scene.getWidth() - BORDER_WIDTH - PLAYER_WIDTH)) {
+			player.playerImage.setX(scene.getWidth() - BORDER_WIDTH - PLAYER_WIDTH - 1);
+		}
+		
+	}
 	public static int randomNumber(int a, int b) {
 	    int highNum = Math.max(a, b);
 	    int lowNum = Math.min(a, b);
