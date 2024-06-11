@@ -18,7 +18,7 @@ import javafx.scene.text.Text;
 public class SpaceInvaders extends Application {
 
 	//Defining variables
-	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75;
+	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75, BEAM_WIDTH = 5, BEAM_HEIGHT = 10;
 
 	boolean menuActive = true, runActive = false, lossActive = false;
 	
@@ -26,8 +26,14 @@ public class SpaceInvaders extends Application {
 	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart, txtScore;
 	
 	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75, HIDDEN = 0,
-			PLAYER_SPEED = 10;
+			PLAYER_SPEED = 10, NUMBER_BEAMS = 10, ALIENS_PER_ROW = 6, BEAM_SPEED = 3;
+	
 	final double V_ENTER_TO_START_POSITION = 1.25;
+	
+	Beam[] beams = new Beam[NUMBER_BEAMS];
+	
+	Alien[] row1 = new Alien[ALIENS_PER_ROW], row2 = new Alien[ALIENS_PER_ROW], row3 = new Alien[ALIENS_PER_ROW],
+			row4 = new Alien[ALIENS_PER_ROW];
 	
 	int score, xDisp;
 	
@@ -86,8 +92,8 @@ public class SpaceInvaders extends Application {
 				updateMenu();
 			} else if (runActive) {
 				hideMenu();
-				player.show();
 				updatePlayer();
+				updateBeams();
 			}
 			
 			updateBorders();
@@ -105,13 +111,28 @@ public class SpaceInvaders extends Application {
 			hideMenu();
 			runActive = true;
 		}
+		//If the user pressed the left key or A, set movement to the left
 		if (code == KeyCode.LEFT || code == KeyCode.KP_LEFT || code == KeyCode.A) {
 			//simulating leftwards movement
 			xDisp = PLAYER_SPEED * -1;
 		}
+		//If the user pressed the right key or D, set the movement to the right
 		if (code == KeyCode.RIGHT || code == KeyCode.KP_RIGHT || code == KeyCode.D) {
 			//simulating rightwards movement
 			xDisp = PLAYER_SPEED;
+		}
+		//If the user pressed the up key, shoot a beam
+		if (code == KeyCode.UP || code == KeyCode.KP_UP) {
+			
+			for (int i = 0; i < NUMBER_BEAMS; i++) {
+				//The beam must have reached the top so that it doesn't get re-shot prematurely
+				if (beams[i].rect.getY() <= 0) {
+					//Repositioning the beam to be above the player
+					beams[i].isShot(player.playerImage.getX(), player.playerImage.getY());
+					
+					i = NUMBER_BEAMS;
+				}
+			}
 		}
 	}
 	
@@ -165,6 +186,12 @@ public class SpaceInvaders extends Application {
 		//Grouping the elements
 		nodes = new Group(txtTitle, txtInstructions, txtEnterToStart, player.playerImage, leftBorder, rightBorder);
 		
+		//Beam generation + adding to group
+		for (int i = 0; i < NUMBER_BEAMS; i++) {
+			beams[i] = generateBeam();
+			nodes.getChildren().add(beams[i].rect);
+		}
+		
 		return nodes;
 	}
 
@@ -208,6 +235,8 @@ public class SpaceInvaders extends Application {
 		
 		double playerX = player.playerImage.getX();
 		
+		player.show();
+		
 		player.playerImage.setY(scene.getHeight() * 0.8);
 		
 		//Not allowing movement past the borders
@@ -224,6 +253,29 @@ public class SpaceInvaders extends Application {
 		}
 		
 	}
+	
+	private Beam generateBeam() {
+		Beam beam = new Beam(0,0);
+		beam.hide();
+		return beam;
+	}
+	
+	private void updateBeams() {
+		
+		//Making the beams move upward each frame
+		for (int i = 0; i < NUMBER_BEAMS; i++) {
+			//The beam must be below the max height to move upwards again
+			if (beams[i].rect.getY() >= 0) {
+				beams[i].show();
+				beams[i].rect.setY(beams[i].rect.getY() - BEAM_SPEED);
+				
+			//Hiding the beam if it reaches the top
+			} else if (beams[i].rect.getY() <= 0){
+				beams[i].hide();
+			}
+		}
+	}
+	
 	public static int randomNumber(int a, int b) {
 	    int highNum = Math.max(a, b);
 	    int lowNum = Math.min(a, b);
