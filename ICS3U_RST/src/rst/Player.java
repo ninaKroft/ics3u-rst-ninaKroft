@@ -2,7 +2,6 @@ package rst;
 
 import javafx.scene.image.ImageView;
 import java.net.URL;
-import javafx.scene.image.ImageView;
 
 
 public class Player {
@@ -32,6 +31,7 @@ public class Player {
 	}
 	
 	public void hide() {
+		//Have to set to 0.0001 because if its set to 0, it sets the width/height to the default
 		playerImage.setFitWidth(0.001);
 		playerImage.setFitHeight(0.001);
 	}

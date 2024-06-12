@@ -18,7 +18,11 @@ import javafx.scene.text.Text;
 public class SpaceInvaders extends Application {
 
 	//Defining variables
-	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75, BEAM_WIDTH = 5, BEAM_HEIGHT = 10;
+	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75, BEAM_WIDTH = 5, BEAM_HEIGHT = 10,
+			ALIEN_WIDTH = 75, ALIEN_HEIGHT = 75;
+	
+	static final int ALIENS_PER_ROW = 6, GREEN_ALIEN_CHANCE = 3, RED_ALIEN_CHANCE = 2, RED_ALIEN_HEALTH = 5, GREEN_ALIEN_HEALTH = 10, 
+			BEAM_DAMAGE = 5, GREEN_ALIEN_POINTS = 20, RED_ALIEN_POINTS = 10;
 
 	boolean menuActive = true, runActive = false, lossActive = false;
 	
@@ -26,16 +30,20 @@ public class SpaceInvaders extends Application {
 	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart, txtScore;
 	
 	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75, HIDDEN = 0,
-			PLAYER_SPEED = 10, NUMBER_BEAMS = 10, ALIENS_PER_ROW = 6, BEAM_SPEED = 3;
+			NUMBER_BEAMS = 20;
 	
-	final double V_ENTER_TO_START_POSITION = 1.25;
+	final double V_ENTER_TO_START_POSITION = 1.25, ALIEN_SPEED = 0.5, BEAM_SPEED = 3, PLAYER_SPEED = 10, TOP_ROW_LOCATION = 0.1, PLAYER_Y_LOCATION = 0.8,
+			ALIEN_ROW_X_LOCATION = 0.3, ALIEN_SPACING = 100;
 	
 	Beam[] beams = new Beam[NUMBER_BEAMS];
 	
 	Alien[] row1 = new Alien[ALIENS_PER_ROW], row2 = new Alien[ALIENS_PER_ROW], row3 = new Alien[ALIENS_PER_ROW],
 			row4 = new Alien[ALIENS_PER_ROW];
 	
-	int score, xDisp;
+	int score;
+	
+	//exactPlayerLocation it updated every iteration, used to determine if the aliens are above the player
+	double xDisp;
 	
 	Scene scene;
 	
@@ -94,6 +102,12 @@ public class SpaceInvaders extends Application {
 				hideMenu();
 				updatePlayer();
 				updateBeams();
+				if (updateAliens() == true) {
+					runActive = false;
+					lossActive = true;
+				}
+			} else if (lossActive) {
+				//run the loss screen
 			}
 			
 			updateBorders();
@@ -192,6 +206,20 @@ public class SpaceInvaders extends Application {
 			nodes.getChildren().add(beams[i].rect);
 		}
 		
+		//Alien row generation + adding to group
+		for (int i = 0; i < ALIENS_PER_ROW; i++) {
+			row1[i] = generateAlien();
+			
+			//The first alien will be moved to the specified x coordinate, then each consecutive alien will be moved over by 
+			//its number multiplied by the spacing. Alien 0 will be at the x coordinate, alien 1 will be ALIEN_SPACING away from alien 0, etc
+			row1[i].alienImage.setX((SCREEN_WIDTH * ALIEN_ROW_X_LOCATION) + (i * ALIEN_SPACING));
+			
+			//Hiding the alien for startup
+			row1[i].hide();
+			
+			nodes.getChildren().add(row1[i].alienImage);
+		}
+		
 		return nodes;
 	}
 
@@ -237,7 +265,7 @@ public class SpaceInvaders extends Application {
 		
 		player.show();
 		
-		player.playerImage.setY(scene.getHeight() * 0.8);
+		player.playerImage.setY(scene.getHeight() * PLAYER_Y_LOCATION);
 		
 		//Not allowing movement past the borders
 		if (playerX >= BORDER_WIDTH && playerX <= scene.getWidth() - BORDER_WIDTH) {
@@ -274,6 +302,52 @@ public class SpaceInvaders extends Application {
 				beams[i].hide();
 			}
 		}
+	}
+	
+	private Alien generateAlien() {
+		Alien alien = new Alien();
+		
+		return alien;
+	}
+	
+	private boolean updateAliens() {
+		int vanquishedAlienCount = 0;
+		boolean lost = false;
+		
+		double topLocation = scene.getHeight() * TOP_ROW_LOCATION;
+		
+		//Making the aliens move downwards each frame if they are above the player
+		for (int i = 0; i < ALIENS_PER_ROW; i++) {
+			
+			//Showing the aliens
+			row1[i].show();
+			//If they are above the player, move it downwards
+			if (row1[i].alienImage.getY() < player.playerImage.getY()) {
+				row1[i].alienImage.setY(row1[i].alienImage.getY() + ALIEN_SPEED);
+				
+			//If they have reached the player and they are not vanquished, the game is lost
+			} else if (row1[i].alienImage.getY() + ALIEN_HEIGHT > player.playerImage.getY() && row1[i].vanquished == false) {
+				//LOST GAME
+			}
+			
+			//Checking if the alien is vanquished. If yes, adding to the counter. Used later to see if all aliens are vanquished in that row
+			//REMOVE OR STATEMENT AFTER TESTING IS DONE
+			 if (row1[i].vanquished == true || row1[i].vanquished == false) {
+				//Count how many aliens are vanquished in that row
+				vanquishedAlienCount += 1;
+			}
+		}
+		
+		//If all of the aliens in the row are vanquished and below the player, send the row back up to the top
+		if (vanquishedAlienCount == ALIENS_PER_ROW && row1[0].alienImage.getY() + ALIEN_HEIGHT > player.playerImage.getY()) {
+			for (int i = 0; i < ALIENS_PER_ROW; i++) {
+				row1[i].alienImage.setY(topLocation);
+				row1[i].randomizeType();
+				
+			}
+		}
+		
+		return lost;
 	}
 	
 	public static int randomNumber(int a, int b) {
