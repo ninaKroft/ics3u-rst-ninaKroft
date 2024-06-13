@@ -21,7 +21,7 @@ public class SpaceInvaders extends Application {
 	static final double SCREEN_WIDTH = 1400, SCREEN_HEIGHT = 700, PLAYER_WIDTH = 75, PLAYER_HEIGHT = 75, BEAM_WIDTH = 5, BEAM_HEIGHT = 10,
 			ALIEN_WIDTH = 50, ALIEN_HEIGHT = 50;
 	
-	static final int ALIENS_PER_ROW = 6, GREEN_ALIEN_CHANCE = 3, RED_ALIEN_CHANCE = 2, RED_ALIEN_HEALTH = 5, GREEN_ALIEN_HEALTH = 10, 
+	static final int ALIENS_PER_ROW = 12, GREEN_ALIEN_CHANCE = 8, RED_ALIEN_CHANCE = 2, RED_ALIEN_HEALTH = 10, GREEN_ALIEN_HEALTH = 5, 
 			BEAM_DAMAGE = 5, GREEN_ALIEN_POINTS = 20, RED_ALIEN_POINTS = 10;
 
 	boolean menuActive = true, runActive = false, lossActive = false, firstStart = true;
@@ -32,16 +32,17 @@ public class SpaceInvaders extends Application {
 	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75, HIDDEN = 0,
 			NUMBER_BEAMS = 20;
 	
-	final double V_ENTER_TO_START_POSITION = 1.25, ALIEN_SPEED = 0.5, BEAM_SPEED = 3, PLAYER_SPEED = 10, TOP_ROW_LOCATION = 0.1, PLAYER_Y_LOCATION = 0.8,
-			ALIEN_ROW_X_LOCATION = 0.3, ALIEN_SPACING = 100;
+	final double V_ENTER_TO_START_POSITION = 1.25, ALIEN_SPEED = 0.2, BEAM_SPEED = 6, PLAYER_SPEED = 10, TOP_ROW_LOCATION = 0.1, PLAYER_Y_LOCATION = 0.8,
+			ALIEN_ROW_X_LOCATION = 0.09, ALIEN_SPACING = 100;
 	
 	Beam[] beams = new Beam[NUMBER_BEAMS];
 	
 	Alien[] row1 = new Alien[ALIENS_PER_ROW], row2 = new Alien[ALIENS_PER_ROW], row3 = new Alien[ALIENS_PER_ROW],
-			row4 = new Alien[ALIENS_PER_ROW], row5 = new Alien[ALIENS_PER_ROW];
+			row4 = new Alien[ALIENS_PER_ROW], row5 = new Alien[ALIENS_PER_ROW], row6 = new Alien[ALIENS_PER_ROW], 
+			row7 = new Alien[ALIENS_PER_ROW], row8 = new Alien[ALIENS_PER_ROW];
 	
 	//An array of arrays for the for loop that updates beams
-	Alien[][] rowsList = {row1, row2, row3, row4, row5};
+	Alien[][] rowsList = {row1, row2, row3, row4, row5, row6, row7, row8};
 	
 	int score;
 	
@@ -302,16 +303,64 @@ public class SpaceInvaders extends Application {
 		
 		//Making the beams move upward each frame
 		for (int i = 0; i < NUMBER_BEAMS; i++) {
+			
 			//The beam must be below the max height to move upwards again
 			if (beams[i].rect.getY() >= 0) {
-				beams[i].show();
+				
+				//Only show the beam if it has not hit anything
+				if (!beams[i].hit) {
+					beams[i].show();
+				}
+				
 				beams[i].rect.setY(beams[i].rect.getY() - BEAM_SPEED);
+				
+				//The beams only need to be checked for collisions if they are not at the max height
+				//For each row of aliens on the board...
+				for (int j = 0; j < rowsList.length; j++) {
+					//For each alien in that row...
+					for (int x = 0; x < ALIENS_PER_ROW; x++) {
+						
+						//If that alien is not vanquished...
+						if (!rowsList[j][x].vanquished) {
+							
+							//If the beam has not already hit an alien...
+							if (!beams[i].hit) {
+								//Get the bounds of the beam and the alien
+								Bounds beamBox = beams[i].rect.getBoundsInParent();
+								Bounds alienBox = rowsList[j][x].alienImage.getBoundsInParent();
+								
+								//If they are colliding...
+								if (beamBox.intersects(alienBox)) {
+									//Reduce that alien's health by the beam's damage
+									rowsList[j][x].health -= BEAM_DAMAGE;
+									
+									//Set that the beam has hit an alien already
+									beams[i].hit = true;
+									
+									//Hide that beam
+									beams[i].hide();
+									
+									//If that alien's health is below or equal to zero...
+									if (rowsList[j][x].health <= 0) {
+										//Set that alien to vanquished
+										rowsList[j][x].vanquish();
+									}
+								}
+							}
+							
+						}
+						
+					}
+					
+				}
+				
 				
 			//Hiding the beam if it reaches the top
 			} else if (beams[i].rect.getY() <= 0){
 				beams[i].hide();
 			}
 		}
+		
 	}
 	
 	private Alien generateAlien() {
@@ -410,6 +459,7 @@ public class SpaceInvaders extends Application {
 		
 		return lost;
 	}
+	
 	
 	public static int randomNumber(int a, int b) {
 	    int highNum = Math.max(a, b);

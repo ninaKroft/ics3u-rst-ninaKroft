@@ -46,12 +46,7 @@ public class Alien {
 			
 		//If its not within either of those ranges, generate a void alien
 		} else {
-			type = "void";
-			vanquished = true;
-			URL voidLocation = SpaceInvaders.class.getResource("/images/Void.png");
-			Image voidImg = new Image(voidLocation.toString());
-			alienImage.setImage(voidImg);
-			hide();
+			vanquish();
 
 		}
 

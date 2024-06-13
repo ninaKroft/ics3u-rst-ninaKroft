@@ -7,6 +7,7 @@ public class Beam {
 
 	double xVal, yVal;
 	Rectangle rect;
+	boolean hit = false;
 	
 	//Constructor
 	Beam(double xVal, double yVal) {
@@ -21,6 +22,7 @@ public class Beam {
 		show();
 		rect.setX(playerX + SpaceInvaders.PLAYER_WIDTH / 2);
 		rect.setY(playerY);
+		hit = false;
 	}
 	
 	public void show() {
@@ -29,8 +31,9 @@ public class Beam {
 	}
 	
 	public void hide() {
-		rect.setWidth(0);
-		rect.setHeight(0);
+		//Have to set to 0.001 because or else it is set to the default
+		rect.setWidth(0.001);
+		rect.setHeight(0.001);
 	}
 
 }
