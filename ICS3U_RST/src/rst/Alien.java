@@ -31,6 +31,7 @@ public class Alien {
 			URL greenLocation = SpaceInvaders.class.getResource("/images/GreenAlien.png");
 			Image greenImg = new Image(greenLocation.toString());
 			alienImage.setImage(greenImg);
+			show();
 			
 		//If its within the red alien chance range
 		} else if (num >= SpaceInvaders.GREEN_ALIEN_CHANCE + 1 && num <= SpaceInvaders.GREEN_ALIEN_CHANCE + SpaceInvaders.RED_ALIEN_CHANCE) {
@@ -41,6 +42,7 @@ public class Alien {
 			URL redLocation = SpaceInvaders.class.getResource("/images/RedAlien.png");
 			Image redImg = new Image(redLocation.toString());
 			alienImage.setImage(redImg);
+			show();
 			
 		//If its not within either of those ranges, generate a void alien
 		} else {
@@ -53,6 +55,16 @@ public class Alien {
 
 		}
 
+	}
+	
+	//Sets the alien type to void, simulating it being vanquished
+	public void vanquish() {
+		type = "void";
+		vanquished = true;
+		URL voidLocation = SpaceInvaders.class.getResource("/images/Void.png");
+		Image voidImg = new Image(voidLocation.toString());
+		alienImage.setImage(voidImg);
+		hide();
 	}
 	
 
