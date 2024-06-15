@@ -26,14 +26,12 @@ public class Beam {
 	}
 	
 	public void show() {
-		rect.setWidth(SpaceInvaders.BEAM_WIDTH);
-		rect.setHeight(SpaceInvaders.BEAM_HEIGHT);
+		rect.setVisible(true);
 	}
 	
 	public void hide() {
 		//Have to set to 0.001 because or else it is set to the default
-		rect.setWidth(0.001);
-		rect.setHeight(0.001);
+		rect.setVisible(false);
 	}
 
 }

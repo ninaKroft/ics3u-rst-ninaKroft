@@ -14,8 +14,17 @@ public class Alien {
 	ImageView alienImage = new ImageView();
 	
 	//Constructor
-	Alien() {
-		randomizeType();
+	Alien(String type) {
+		
+		switch (type){
+		case "regular":
+			randomizeType();
+			break;
+			
+		case "boss":
+			
+		}
+		
 	}
 
 	//The sum of GREEN_ALIEN_CHANCE and RED_ALIEN_CHANCE must be equal or lesser to ALIENS_PER_ROW
@@ -62,20 +71,27 @@ public class Alien {
 		hide();
 	}
 	
-
+	public void generateBoss() {
+		URL boss1Location = SpaceInvaders.class.getResource("/images/AlienBoss1.png");
+		Image bossImg1 = new Image(boss1Location.toString());
+		alienImage.setImage(bossImg1);
+		health = SpaceInvaders.BOSS_HEALTH;
+		points = SpaceInvaders.BOSS_POINTS;
+		vanquished = false;
+		show();
+		
+		
+	}
 	
 	public void hide() {
-		//Have to set to 0.0001 because if its set to 0, it sets the width/height to the default
-		alienImage.setFitWidth(0.001);
-		alienImage.setFitHeight(0.001);
+		alienImage.setVisible(false);
 		
 	}
 	
 	public void show() {
 		//Only displaying aliens that are not vanquished
 		if (!vanquished) {
-			alienImage.setFitWidth(SpaceInvaders.ALIEN_WIDTH);
-			alienImage.setFitHeight(SpaceInvaders.ALIEN_HEIGHT);
+			alienImage.setVisible(true);
 		}
 		
 		

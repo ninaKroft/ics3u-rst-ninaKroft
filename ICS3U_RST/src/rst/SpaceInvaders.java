@@ -5,6 +5,7 @@ import javafx.application.Application;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.scene.input.KeyCode;
@@ -22,18 +23,19 @@ public class SpaceInvaders extends Application {
 			ALIEN_WIDTH = 50, ALIEN_HEIGHT = 50;
 	
 	static final int ALIENS_PER_ROW = 12, GREEN_ALIEN_CHANCE = 8, RED_ALIEN_CHANCE = 2, RED_ALIEN_HEALTH = 10, GREEN_ALIEN_HEALTH = 5, 
-			BEAM_DAMAGE = 5, GREEN_ALIEN_POINTS = 20, RED_ALIEN_POINTS = 10;
+			BEAM_DAMAGE = 5, GREEN_ALIEN_POINTS = 2, RED_ALIEN_POINTS = 5, BOSS_HEALTH = 100, BOSS_POINTS = 300;
 
-	boolean menuActive = true, runActive = false, lossActive = false, firstStart = true;
+	boolean menuActive = true, runActive = false, lossActive = false, firstStart = true, bossActive = false, hideAliens;
 	
 	//Text objects
-	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart, txtScore;
+	Text txtInstructions, txtTitle, txtEnterToStart, txtSpaceToPause, txtCToContinue, txtRToRestart, txtScore, txtLoss, txtFinalScore;
 	
 	final int TITLE_SIZE = 50, INSTRUCTION_SIZE = 20, V_TITLE_POSITION = 3, V_INSTRUCTION_POSITION = 2, BORDER_WIDTH = 75, HIDDEN = 0,
-			NUMBER_BEAMS = 20;
+			NUMBER_BEAMS = 20, SCORE_SIZE = 25, BOSS_WIDTH = 150, BOSS_HEIGHT = 150, BOSS_SENTINEL = 10;
 	
-	final double V_ENTER_TO_START_POSITION = 1.25, ALIEN_SPEED = 0.2, BEAM_SPEED = 6, PLAYER_SPEED = 10, TOP_ROW_LOCATION = 0.1, PLAYER_Y_LOCATION = 0.8,
-			ALIEN_ROW_X_LOCATION = 0.09, ALIEN_SPACING = 100;
+	final double V_ENTER_TO_START_POSITION = 1.25, ALIEN_SPEED = 0.2, BEAM_SPEED = 6, PLAYER_SPEED = 7, TOP_ROW_LOCATION = 0.1, PLAYER_Y_LOCATION = 0.8,
+			ALIEN_ROW_X_LOCATION = 0.09, ALIEN_SPACING = 100, FINAL_SCORE_POSITION = 0.6, TXT_LOSS_POSITION = 0.3, RESTART_BTN_POSITION = 0.7, 
+			BOSS_Y_LOCATION = 0.3, BOSS_SPEED = 5;
 	
 	Beam[] beams = new Beam[NUMBER_BEAMS];
 	
@@ -44,12 +46,18 @@ public class SpaceInvaders extends Application {
 	//An array of arrays for the for loop that updates beams
 	Alien[][] rowsList = {row1, row2, row3, row4, row5, row6, row7, row8};
 	
-	int score;
+	Alien boss;
+	
+	int score, bossCount = 1;
+	
+	String font = "verdana";
 	
 	//exactPlayerLocation it updated every iteration, used to determine if the aliens are above the player
 	double xDisp;
 	
 	Scene scene;
+	
+	Button btnRestart;
 	
 	Group root = null, nodes = null, borders = null;
 	
@@ -61,15 +69,11 @@ public class SpaceInvaders extends Application {
 	public void start(Stage myStage) throws Exception {
 		//Setting the stage and checking for keys pressed
 		
-		//MENU SCREEN
-		
 		//Create the elements to be displayed on the menu screen (text, decos)
 		//add it to the group
 		
 		//List fonts
 		//System.out.println(Font.getFontNames());
-		
-		//Title setup
 		
 		root = new Group(generateElements());
 		
@@ -84,6 +88,9 @@ public class SpaceInvaders extends Application {
 		scene.setOnKeyPressed(event -> handleKeyPressed(event));
 		scene.setOnKeyReleased(event -> handleKeyReleased(event));
 		
+		//Handling if the restart button is pressed
+		btnRestart.setOnAction(event -> restart());
+		
 		myStage.setTitle("Space Invaders");
         myStage.setScene(scene);
         myStage.show();
@@ -97,7 +104,6 @@ public class SpaceInvaders extends Application {
 			
 			//Updating the elements if the screen is resized
 			if (menuActive) {
-				showMenu();
 				updateMenu();
 				
 			} else if (runActive) {
@@ -105,6 +111,7 @@ public class SpaceInvaders extends Application {
 				hideMenu();
 				updatePlayer();
 				updateBeams();
+				updateScore();
 				
 				for (int i = 0; i < rowsList.length; i++) {
 					if (updateAliens(i) == true) {
@@ -113,8 +120,22 @@ public class SpaceInvaders extends Application {
 					}
 				}
 				
+			} else if (bossActive) {
+				
+				//Only need to hide the aliens once
+				if (hideAliens) {
+					pauseAliens();
+					hideAliens = false;
+				}
+				
+				updateBoss();
+				updatePlayer();
+				updateBeams();
+				
 			} else if (lossActive) {
-				//run the loss screen
+				//run the loss screen and hide the level
+				hideLevel();
+				updateLossScreen();
 			}
 			
 			updateBorders();
@@ -173,7 +194,7 @@ public class SpaceInvaders extends Application {
 	private Group generateElements() {
 		//Title generation
 		txtTitle = new Text("SPACE INVADERS");
-		txtTitle.setFont(Font.font("verdana", HIDDEN));
+		txtTitle.setFont(Font.font(font, HIDDEN));
 		txtTitle.setX(SCREEN_WIDTH / 2 - (txtTitle.maxWidth(TITLE_SIZE) / 2));
 		txtTitle.setY(SCREEN_HEIGHT / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
 		txtTitle.setFill(Color.WHITE);
@@ -182,14 +203,14 @@ public class SpaceInvaders extends Application {
 		txtInstructions = new Text("INSTRUCTIONS: Use the left and right arrows (or A/D) to move side-to-side. \nUse the up arrow to shoot a beam."
 				+ " Your goal is to hit and vanquish the \noncoming aliens before they reach you. Vanquish as many as possible"
 				+ " \nfor the highest score!");
-		txtInstructions.setFont(Font.font("verdana", HIDDEN));
+		txtInstructions.setFont(Font.font(font, HIDDEN));
 		txtInstructions.setX(SCREEN_WIDTH / 2 - (txtInstructions.maxWidth(TITLE_SIZE) / 2));
 		txtInstructions.setY(SCREEN_HEIGHT / V_INSTRUCTION_POSITION - (txtInstructions.maxHeight(TITLE_SIZE) / 2));
 		txtInstructions.setFill(Color.WHITE);
 		
 		//Enter to start text generation
 		txtEnterToStart = new Text("PRESS ENTER TO START");
-		txtEnterToStart.setFont(Font.font("verdana", HIDDEN));
+		txtEnterToStart.setFont(Font.font(font, HIDDEN));
 		txtEnterToStart.setX(SCREEN_WIDTH / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE) / 2));
 		txtEnterToStart.setY(SCREEN_HEIGHT / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
 		txtEnterToStart.setFill(Color.WHITE);
@@ -200,12 +221,43 @@ public class SpaceInvaders extends Application {
 		rightBorder = new Rectangle(SCREEN_WIDTH - BORDER_WIDTH, 0, BORDER_WIDTH, SCREEN_HEIGHT);
 		rightBorder.setFill(Color.rgb(128, 3, 252));
 		
+		//Score generation
+		txtScore = new Text("SCORE: " + score);
+		txtScore.setFont(Font.font(font, HIDDEN));
+		txtScore.setX(BORDER_WIDTH + 5);
+		txtScore.setY(SCREEN_HEIGHT - 5);
+		txtScore.setFill(Color.WHITE);
+		
+		//Loss screen elements generation
+		txtLoss = new Text("You Lost!");
+		txtLoss.setFont(Font.font(font, HIDDEN));
+		txtLoss.setFill(Color.WHITE);
+		
+		txtFinalScore = new Text("Your final score is: " + score);
+		txtFinalScore.setFont(Font.font(font, HIDDEN));
+		txtFinalScore.setFill(Color.WHITE);
+		
+		//Button for the loss screen
+		btnRestart = new Button();
+		btnRestart.setText("Click to Restart");
+		btnRestart.setVisible(false);
+		
 		//Player generation
-		player = new Player(SCREEN_WIDTH / 2 - (PLAYER_WIDTH / 2), SCREEN_HEIGHT * 0.8, true);
+		player = new Player(SCREEN_WIDTH / 2 - (PLAYER_WIDTH / 2), SCREEN_HEIGHT * PLAYER_Y_LOCATION, true);
 		player.hide();
 		
+		//Boss alien generation
+		boss = new Alien("boss");
+		boss.hide();
+		boss.alienImage.setFitWidth(BOSS_WIDTH);
+		boss.alienImage.setFitHeight(BOSS_HEIGHT);
+		//Center the boss alien
+		boss.alienImage.setX(SCREEN_WIDTH / 2 - boss.alienImage.getFitWidth() / 2);
+		boss.alienImage.setY(SCREEN_HEIGHT * BOSS_Y_LOCATION);
+				
 		//Grouping the elements
-		nodes = new Group(txtTitle, txtInstructions, txtEnterToStart, player.playerImage, leftBorder, rightBorder);
+		nodes = new Group(txtTitle, txtInstructions, txtEnterToStart, player.playerImage, leftBorder, rightBorder, txtScore, txtLoss, txtFinalScore,
+				btnRestart, boss.alienImage);
 		
 		//Beam generation + adding to group
 		for (int i = 0; i < NUMBER_BEAMS; i++) {
@@ -236,6 +288,12 @@ public class SpaceInvaders extends Application {
 
 	private void updateMenu() {
 		//Handling if the user re-sizes the screen
+		
+		//Showing the menu
+		txtTitle.setFont(Font.font(font, TITLE_SIZE));
+		txtInstructions.setFont(Font.font(font, INSTRUCTION_SIZE));
+		txtEnterToStart.setFont(Font.font(font, TITLE_SIZE));
+		
 		//Title
 		txtTitle.setX(scene.getWidth() / 2 - (txtTitle.maxWidth(TITLE_SIZE)) / 2);
 		txtTitle.setY(scene.getHeight() / V_TITLE_POSITION - (txtTitle.maxHeight(TITLE_SIZE) / 2));
@@ -248,7 +306,6 @@ public class SpaceInvaders extends Application {
 		txtEnterToStart.setX(scene.getWidth() / 2 - (txtEnterToStart.maxWidth(TITLE_SIZE)) / 2);
 		txtEnterToStart.setY(scene.getHeight() / V_ENTER_TO_START_POSITION - (txtEnterToStart.maxHeight(TITLE_SIZE) / 2));
 		
-		
 	}
 	
 	private void updateBorders() {
@@ -256,12 +313,6 @@ public class SpaceInvaders extends Application {
 		leftBorder.setHeight(scene.getHeight());
 		rightBorder.setHeight(scene.getHeight());
 		rightBorder.setX(scene.getWidth() - BORDER_WIDTH);
-	}
-	
-	private void showMenu() {
-		txtTitle.setFont(Font.font(TITLE_SIZE));
-		txtInstructions.setFont(Font.font(INSTRUCTION_SIZE));
-		txtEnterToStart.setFont(Font.font(TITLE_SIZE));
 	}
 	
 	private void hideMenu() {
@@ -274,6 +325,8 @@ public class SpaceInvaders extends Application {
 		
 		double playerX = player.playerImage.getX();
 		
+		player.playerImage.setFitWidth(SpaceInvaders.PLAYER_WIDTH);
+		player.playerImage.setFitHeight(SpaceInvaders.PLAYER_HEIGHT);
 		player.show();
 		
 		player.playerImage.setY(scene.getHeight() * PLAYER_Y_LOCATION);
@@ -304,6 +357,12 @@ public class SpaceInvaders extends Application {
 		//Making the beams move upward each frame
 		for (int i = 0; i < NUMBER_BEAMS; i++) {
 			
+			beams[i].rect.setWidth(SpaceInvaders.BEAM_WIDTH);
+			beams[i].rect.setHeight(SpaceInvaders.BEAM_HEIGHT);
+			
+			//Get the bounds of the beam
+			Bounds beamBox = beams[i].rect.getBoundsInParent();
+			
 			//The beam must be below the max height to move upwards again
 			if (beams[i].rect.getY() >= 0) {
 				
@@ -314,44 +373,98 @@ public class SpaceInvaders extends Application {
 				
 				beams[i].rect.setY(beams[i].rect.getY() - BEAM_SPEED);
 				
+				/* CHECKING FOR COLLISIONS BETWEEN THE BEAMS AND THE REGULAR ALIENS */
 				//The beams only need to be checked for collisions if they are not at the max height
-				//For each row of aliens on the board...
-				for (int j = 0; j < rowsList.length; j++) {
-					//For each alien in that row...
-					for (int x = 0; x < ALIENS_PER_ROW; x++) {
-						
-						//If that alien is not vanquished...
-						if (!rowsList[j][x].vanquished) {
+				
+				//If the level is being run...
+				if (runActive) {
+					//For each row of aliens on the board...
+					for (int j = 0; j < rowsList.length; j++) {
+						//For each alien in that row...
+						for (int x = 0; x < ALIENS_PER_ROW; x++) {
 							
-							//If the beam has not already hit an alien...
-							if (!beams[i].hit) {
-								//Get the bounds of the beam and the alien
-								Bounds beamBox = beams[i].rect.getBoundsInParent();
-								Bounds alienBox = rowsList[j][x].alienImage.getBoundsInParent();
+							//If that alien is not hidden...
+							if (rowsList[j][x].alienImage.isVisible()) {
 								
-								//If they are colliding...
-								if (beamBox.intersects(alienBox)) {
-									//Reduce that alien's health by the beam's damage
-									rowsList[j][x].health -= BEAM_DAMAGE;
+								//If the beam has not already hit an alien...
+								if (!beams[i].hit) {
+									//Get the bounds of the alien
+									Bounds alienBox = rowsList[j][x].alienImage.getBoundsInParent();
 									
-									//Set that the beam has hit an alien already
-									beams[i].hit = true;
-									
-									//Hide that beam
-									beams[i].hide();
-									
-									//If that alien's health is below or equal to zero...
-									if (rowsList[j][x].health <= 0) {
-										//Set that alien to vanquished
-										rowsList[j][x].vanquish();
+									//If they are colliding...
+									if (beamBox.intersects(alienBox)) {
+										//Reduce that alien's health by the beam's damage
+										rowsList[j][x].health -= BEAM_DAMAGE;
+										
+										//Set that the beam has hit an alien already
+										beams[i].hit = true;
+										
+										//Hide that beam
+										beams[i].hide();
+										
+										//If that alien's health is below or equal to zero...
+										if (rowsList[j][x].health <= 0) {
+											//Set that alien to vanquished
+											rowsList[j][x].vanquish();
+											
+											//Add it's point value to the score
+											//Have to use a for loop to increment the score by one so we can check each time if the score reaches
+											// the boss sentinel
+											
+											for (int t = 0; t < rowsList[j][x].points; t++) {
+												score += 1;
+												
+												//If the score is equal to the boss sentinel times the number of times it has been run...
+												if (score == BOSS_SENTINEL * bossCount) {
+													//Activate the boss loop, deactivate the run loop, pause the aliens
+													bossActive = true;
+													runActive = false;
+													hideAliens = true;
+												}
+										
+											}
+											
+										}
 									}
 								}
+								
 							}
 							
 						}
 						
 					}
 					
+				/* CHECKING FOR COLLISIONS BETWEEN THE BEAMS AND THE BOSS ALIEN */
+				//If the boss scene is active...
+				} else if (bossActive) {
+				
+					//Get the bounds of the boss
+					Bounds bossBox = boss.alienImage.getBoundsInParent();
+					
+					//If the beam has not already hit something...
+					if (!beams[i].hit) {
+						
+						//If the beam is intersecting with the boss alien...
+						if (beamBox.intersects(bossBox)) {
+							//Reducing the boss' health
+							boss.health -= BEAM_DAMAGE;
+							
+							//Setting that that beam has collided with something
+							beams[i].hit = true;
+							
+							//Hide that beam
+							beams[i].hide();
+							
+							//Checking if the boss' health is less than or equal to zero
+							//Set the alien boss to vanquished so the vanquish animation can be played in the update boss method and add the score
+							if (boss.health <= 0) {
+								boss.vanquished = true;
+								bossCount += 1;
+								score += BOSS_POINTS;
+							}
+						}
+						
+					}
 				}
 				
 				
@@ -363,8 +476,19 @@ public class SpaceInvaders extends Application {
 		
 	}
 	
+	private void updateScore() {
+		//Setting the score to be visible
+		txtScore.setFont(Font.font(font, SCORE_SIZE));
+		
+		//Repositioning if the user re sizes the screen
+		txtScore.setY(scene.getHeight() - 5);
+		
+		//Updating the value of the score
+		txtScore.setText("SCORE: "+ score);
+	}
+	
 	private Alien generateAlien() {
-		Alien alien = new Alien();
+		Alien alien = new Alien("regular");
 		return alien;
 	}
 	
@@ -378,6 +502,9 @@ public class SpaceInvaders extends Application {
 		double topLocation = scene.getHeight() * TOP_ROW_LOCATION;
 		
 		for (int i = 0; i < ALIENS_PER_ROW; i++) {
+			
+			row[i].alienImage.setFitWidth(SpaceInvaders.ALIEN_WIDTH);
+			row[i].alienImage.setFitHeight(SpaceInvaders.ALIEN_HEIGHT);
 			
 			//Updating the xValue if the player resizes the screen
 			row[i].alienImage.setX((scene.getWidth() * ALIEN_ROW_X_LOCATION) + (i * ALIEN_SPACING));
@@ -410,11 +537,11 @@ public class SpaceInvaders extends Application {
 					//If they have reached the player and they are not vanquished, the game is lost
 					} else if (row[i].alienImage.getY() + ALIEN_HEIGHT > player.playerImage.getY() && row[i].vanquished == false) {
 						//LOST GAME
+						lost = true;
 					}
 				
 					//Checking if the alien is vanquished. If yes, adding to the counter. Used later to see if all aliens are vanquished in that row
-					//REMOVE OR STATEMENT AFTER TESTING IS DONE
-					 if (row[i].vanquished == true || row[i].vanquished == false) {
+					 if (row[i].vanquished == true) {
 						//Count how many aliens are vanquished in that row
 						vanquishedAlienCount += 1;
 						
@@ -433,11 +560,11 @@ public class SpaceInvaders extends Application {
 				//If they have reached the player and they are not vanquished, the game is lost
 				} else if (row[i].alienImage.getY() + ALIEN_HEIGHT > player.playerImage.getY() && row[i].vanquished == false) {
 					//LOST GAME
+					lost = true;
 				}
 			
 				//Checking if the alien is vanquished. If yes, adding to the counter. Used later to see if all aliens are vanquished in that row
-				//REMOVE OR STATEMENT AFTER TESTING IS DONE
-				 if (row[i].vanquished == true || row[i].vanquished == false) {
+				 if (row[i].vanquished == true) {
 					//Count how many aliens are vanquished in that row
 					vanquishedAlienCount += 1;
 				}
@@ -449,7 +576,6 @@ public class SpaceInvaders extends Application {
 			for (int i = 0; i < ALIENS_PER_ROW; i++) {
 				row[i].alienImage.setY(topLocation);
 				row[i].randomizeType();
-				row[i].hide();
 				
 				//The aliens will definitely be spaced out and nice if one reaches the bottom
 				firstStart = false;
@@ -460,6 +586,121 @@ public class SpaceInvaders extends Application {
 		return lost;
 	}
 	
+	private void hideLevel() {
+		//Hides all of the elements of the level
+		
+		//Hiding the player
+		player.hide();
+		
+		//Hiding the beams
+		for (int i = 0; i < beams.length; i++) {
+			beams[i].hide();
+		}
+		
+		//Hiding the aliens
+		for (int i = 0; i < rowsList.length; i ++) {
+			for (int j = 0; j < ALIENS_PER_ROW; j++) {
+				rowsList[i][j].hide();
+			}
+		}
+		
+		//Hiding the score text
+		txtScore.setFont(Font.font(HIDDEN));
+	}
+	
+	private void updateLossScreen() {
+		//You Lost! text
+		txtLoss.setFont(Font.font(font, TITLE_SIZE));
+		txtLoss.setX(scene.getWidth() / 2 - txtLoss.maxWidth(TITLE_SIZE) / 2);
+		txtLoss.setY(scene.getHeight() * TXT_LOSS_POSITION);
+		txtLoss.setVisible(true);
+		
+		//THe final score text
+		txtFinalScore.setFont(Font.font(font, TITLE_SIZE));
+		txtFinalScore.setText("FINAL SCORE: "+ score);
+		txtFinalScore.setX(scene.getWidth() / 2 - txtFinalScore.maxWidth(TITLE_SIZE) / 2);
+		txtFinalScore.setY(scene.getHeight() * FINAL_SCORE_POSITION);
+		txtFinalScore.setVisible(true);
+		
+		//Button allowing the user to restart
+		btnRestart.setLayoutX(scene.getWidth() / 2 - btnRestart.getWidth() / 2);
+		btnRestart.setLayoutY(scene.getHeight() * RESTART_BTN_POSITION);
+		btnRestart.setVisible(true);
+		
+	}
+	
+	private void hideLossScreen() {
+		//Hiding all of the loss screen stuff
+		btnRestart.setVisible(false);
+		txtLoss.setVisible(false);
+		txtFinalScore.setVisible(false);
+		
+		
+	}
+	
+	private void restart() {
+		lossActive = false;
+		runActive = true;
+		
+		hideLossScreen();
+		
+		score = 0;
+		
+		//Put everything back at the beginning position in the level
+		player.playerImage.setX(scene.getWidth() / 2 - (PLAYER_WIDTH / 2));
+		
+		//The aliens will be bunched up again so we need firstStart to run
+		firstStart = true;
+		
+		for (int i = 0; i < rowsList.length; i++) {
+			for (int j = 0; j < ALIENS_PER_ROW; j++) {
+				rowsList[i][j].alienImage.setX((scene.getWidth() * ALIEN_ROW_X_LOCATION) + (i * ALIEN_SPACING));
+				rowsList[i][j].alienImage.setY(scene.getHeight() * TOP_ROW_LOCATION);
+				rowsList[i][j].randomizeType();
+				rowsList[i][j].hide();
+			}
+		}
+		
+		for (int i = 0; i < NUMBER_BEAMS; i++) {
+			//Move all of the beams to the top of the screen.
+			beams[i].rect.setY(0);
+		}
+	}
+	
+	private void pauseAliens() {
+		//Hide the aliens and pause them
+		for (int i = 0; i < rowsList.length; i++) {
+			for (int j = 0; j < ALIENS_PER_ROW; j++) {
+				rowsList[i][j].hide();
+			}
+		}
+	}
+	
+	private void updateBoss() {
+		//Show the boss
+		boss.show();
+		
+		//Simple AI: moves toward the player on the x axis
+		//If the player is to the right of the boss, move the boss to the right
+		if (player.playerImage.getX() > boss.alienImage.getX()) {
+			boss.alienImage.setX(boss.alienImage.getX() + BOSS_SPEED);
+			
+		//If the player is to the left of the boss, move the boss to the left
+		} else if (player.playerImage.getX() < boss.alienImage.getX()) {
+			boss.alienImage.setX(boss.alienImage.getX() - BOSS_SPEED);
+		}
+		
+		//If the boss has been vanquished...
+		if (boss.vanquished) {
+			//Run the boss vanquished animation
+			//Resume the game
+			bossActive = false;
+			
+			//Resume the regular game play
+			runActive = true;
+		}
+		
+	}
 	
 	public static int randomNumber(int a, int b) {
 	    int highNum = Math.max(a, b);
