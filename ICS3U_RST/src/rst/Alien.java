@@ -22,7 +22,8 @@ public class Alien {
 			break;
 			
 		case "boss":
-			
+			generateBoss();
+			break;
 		}
 		
 	}
@@ -78,9 +79,19 @@ public class Alien {
 		health = SpaceInvaders.BOSS_HEALTH;
 		points = SpaceInvaders.BOSS_POINTS;
 		vanquished = false;
-		show();
-		
-		
+		show();	
+	}
+	
+	public void bossFrame1() {
+		URL boss1Location = SpaceInvaders.class.getResource("/images/AlienBoss1.png");
+		Image bossImg1 = new Image(boss1Location.toString());
+		alienImage.setImage(bossImg1);
+	}
+	
+	public void bossFrame2() {
+		URL boss2Location = SpaceInvaders.class.getResource("/images/AlienBoss2.png");
+		Image bossImg2 = new Image(boss2Location.toString());
+		alienImage.setImage(bossImg2);
 	}
 	
 	public void hide() {
