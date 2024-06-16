@@ -10,6 +10,7 @@ import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import java.net.URL;
 import javafx.scene.shape.Rectangle;
@@ -43,10 +44,10 @@ public class SpaceInvaders extends Application {
 	
 	Alien[] row1 = new Alien[ALIENS_PER_ROW], row2 = new Alien[ALIENS_PER_ROW], row3 = new Alien[ALIENS_PER_ROW],
 			row4 = new Alien[ALIENS_PER_ROW], row5 = new Alien[ALIENS_PER_ROW], row6 = new Alien[ALIENS_PER_ROW], 
-			row7 = new Alien[ALIENS_PER_ROW], row8 = new Alien[ALIENS_PER_ROW];
+			row7 = new Alien[ALIENS_PER_ROW];
 	
 	//An array of arrays for the for loop that updates beams
-	Alien[][] rowsList = {row1, row2, row3, row4, row5, row6, row7, row8};
+	Alien[][] rowsList = {row1, row2, row3, row4, row5, row6, row7};
 	
 	Alien boss;
 	
@@ -60,6 +61,8 @@ public class SpaceInvaders extends Application {
 	Scene scene;
 	
 	GameTimer timer;
+	
+	AudioClip beamSound, levelMusic, bossMusic;
 	
 	Button btnRestart;
 	
@@ -88,6 +91,11 @@ public class SpaceInvaders extends Application {
 		scene = new Scene(root, SCREEN_WIDTH, SCREEN_HEIGHT);
 		scene.setFill(Color.rgb(10, 3, 23));
 		
+		//Creating the sounds
+		beamSound = new AudioClip(SpaceInvaders.class.getResource("/sounds/beamSound.wav").toString());
+		levelMusic = new AudioClip(SpaceInvaders.class.getResource("/sounds/levelMusic.mp3").toString());
+		bossMusic = new AudioClip(SpaceInvaders.class.getResource("/sounds/bossFightMusic.mp3").toString());
+		
 		//Handling keys pressed and released
 		scene.setOnKeyPressed(event -> handleKeyPressed(event));
 		scene.setOnKeyReleased(event -> handleKeyReleased(event));
@@ -113,6 +121,15 @@ public class SpaceInvaders extends Application {
 			} else if (runActive) {
 				//Updating elements if the screen has been resized or moving according to speed
 				hideMenu();
+				if (!levelMusic.isPlaying()) {
+					levelMusic.play();
+				}
+				
+				//Stopping the boss music if its playing
+				if (bossMusic.isPlaying()) {
+					bossMusic.stop();
+				}
+				
 				updatePlayer();
 				updateBeams();
 				updateScore();
@@ -140,6 +157,14 @@ public class SpaceInvaders extends Application {
 				}
 				
 				restartBoss = false;
+				
+				if(levelMusic.isPlaying()) {
+					levelMusic.stop();
+				}
+				
+				if(!bossMusic.isPlaying()) {
+					bossMusic.play();
+				}
 				
 				updateBoss();
 				updatePlayer();
@@ -185,6 +210,9 @@ public class SpaceInvaders extends Application {
 					if (beams[i].rect.getY() <= 0) {
 						//Repositioning the beam to be above the player using the isShot method
 						beams[i].isShot(player.playerImage.getX(), player.playerImage.getY());
+						
+						//Playing the shooting sound
+						beamSound.play();
 						
 						//Ending the search once a beam has been shot
 						i = NUMBER_BEAMS;
@@ -672,8 +700,9 @@ public class SpaceInvaders extends Application {
 		}
 		
 		//Hiding the score text
-		txtScore.setFont(Font.font(HIDDEN));
+		txtScore.setVisible(false);
 	}
+	
 	
 	private void updateLossScreen() {
 		//You Lost! text
@@ -696,6 +725,7 @@ public class SpaceInvaders extends Application {
 		
 	}
 	
+	
 	private void hideLossScreen() {
 		//Hiding all of the loss screen stuff
 		btnRestart.setVisible(false);
@@ -704,6 +734,7 @@ public class SpaceInvaders extends Application {
 		
 		
 	}
+	
 	
 	private void restart() {
 		
@@ -745,6 +776,7 @@ public class SpaceInvaders extends Application {
 		runActive = true;
 	}
 	
+	
 	private void pauseAliens() {
 		//Hide the aliens and pause them
 		for (int i = 0; i < rowsList.length; i++) {
@@ -753,6 +785,7 @@ public class SpaceInvaders extends Application {
 			}
 		}
 	}
+	
 	
 	private void updateBoss() {
 		
@@ -814,6 +847,7 @@ public class SpaceInvaders extends Application {
 		
 	}
 	
+	
 	private double moveBossX() {
 		
 		//Getting the bounds of the alien boss
@@ -844,6 +878,7 @@ public class SpaceInvaders extends Application {
 		
 	}
 	
+	
 	private double moveBossY() {
 		
 		//Modeling the boss' y-movement to a cosine wave
@@ -855,6 +890,7 @@ public class SpaceInvaders extends Application {
 		
 		return bossYDisp;
 	}
+	
 	
 	private void shootBossBeam() {
 		bossBeam.setVisible(true);
