@@ -6,7 +6,7 @@ import java.net.URL;
 
 public class Player {
 
-	//Data fields
+	//Defining data fields
 	double xVal, yVal;
 	boolean alive;
 	ImageView playerImage;
@@ -19,7 +19,11 @@ public class Player {
 		this.playerImage = generatePlayer();
 	}
 	
-	
+	/**
+	 * This method generates the player at the specified x and y coordinate the object was created with
+	 * 
+	 * @return The ImageView of the player
+	 */
 	private ImageView generatePlayer() {
 		
 		URL location = SpaceInvaders.class.getResource("/images/Player.png");
@@ -30,10 +34,16 @@ public class Player {
 		return playerImage;
 	}
 	
+	/**
+	 * This method hides the player
+	 */
 	public void hide() {
 		playerImage.setVisible(false);
 	}
 	
+	/**
+	 * This method shows the player
+	 */
 	public void show() {
 		playerImage.setVisible(true);
 	}
